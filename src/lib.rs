@@ -127,12 +127,12 @@ mod test {
 
     use crate::{
         msg::{LogSeverity},
-        sink::{ConsoleSink, SinkDeclaration},
+        sink::{SinkDeclaration, VoidSink},
     };
 
     #[test]
     fn log_macros() {
-        let sink = ConsoleSink::new(SinkDeclaration {
+        let sink = VoidSink::new(SinkDeclaration {
             name: "console".to_string(),
             severity: LogSeverity::Trace,
             module: "".to_string(),
@@ -161,7 +161,7 @@ mod test {
 
     #[test]
     fn time_macro() {
-        let sink = ConsoleSink::new(SinkDeclaration {
+        let sink = VoidSink::new(SinkDeclaration {
             name: "console".to_string(),
             severity: LogSeverity::Trace,
             module: "".to_string(),
