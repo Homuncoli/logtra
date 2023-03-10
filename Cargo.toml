@@ -1,7 +1,14 @@
 [package]
 name = "logtra"
 version = "0.1.0"
+authors = ["Benedikt Danner <benedikt@danner.eu.com>"]
 edition = "2021"
+description = "A minimal logging library"
+readme = "./README.md"
+repository = "https://github.com/Homuncoli/logtra"
+license-file = "./LICENSE"
+keywords = ["xtra", "debugging", "profiling", "testing", "game-development"]
+categories = ["debugging", "profiling", "testing", "game-development", "game-engines"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
