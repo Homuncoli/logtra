@@ -111,6 +111,13 @@ macro_rules! error_assert {
         }
     };
 }
+macro_rules! time {
+    ($name: ident, $block: block) => {{
+        let $name : std::time::SystemTime = chrono::Utc::now().into();
+        $block
+        debug!("{} took {}ms", stringify!($name), $name.elapsed().unwrap().as_millis());
+    }};
+}
 
 #[cfg(test)]
 mod test {
@@ -150,6 +157,24 @@ mod test {
         error_assert!(&(now == now));
         fatal_assert!(&(now != now));
         fatal_assert!(&(now == now));
+    }
+
+    #[test]
+    fn time_macro() {
+        let sink = ConsoleSink::new(SinkDeclaration {
+            name: "console".to_string(),
+            severity: LogSeverity::Trace,
+            module: "".to_string(),
+            template: "[%t][%c][%[%i%]][%s][%f:%l]: %m\n".to_string(),
+        });
+        sink!(sink);
+
+        time!(summing, {
+            let mut a: u32 = 0;
+            for _ in 0..1000000 {
+                a += 1 + 1 / 2 % 2;
+            }
+        })
     }
 }
 
