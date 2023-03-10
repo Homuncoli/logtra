@@ -77,7 +77,7 @@ macro_rules! fatal {
 }
 #[doc(hidden)]
 /// Use log! instead
-pub fn log<T: std::fmt::Debug>(severity: crate::msg::LogSeverity, name: &str, obj: &T) {
+pub fn log<T: std::fmt::Debug + ?Sized>(severity: crate::msg::LogSeverity, name: &str, obj: &T) {
     match severity {
         msg::LogSeverity::Trace => trace!("{}: {:?}", name, obj),
         msg::LogSeverity::Debug => debug!("{}: {:?}", name, obj),
@@ -114,10 +114,12 @@ macro_rules! error_assert {
 
 #[cfg(test)]
 mod test {
+    use std::{time::SystemTime};
+
     use chrono::Utc;
 
     use crate::{
-        msg::{LogMessage, LogSeverity},
+        msg::{LogSeverity},
         sink::{ConsoleSink, SinkDeclaration},
     };
 
@@ -126,23 +128,12 @@ mod test {
         let sink = ConsoleSink::new(SinkDeclaration {
             name: "console".to_string(),
             severity: LogSeverity::Trace,
-            module: "*".to_string(),
+            module: "".to_string(),
             template: "[%t][%c][%[%i%]][%s][%f:%l]: %m\n".to_string(),
         });
         sink!(sink);
 
-        let now = Utc::now().into();
-        let line = line!();
-
-        let expected = LogMessage {
-            time: now,
-            module: module_path!(),
-            file: file!(),
-            line: line,
-            msg: "Hello World!",
-            severity: LogSeverity::Info,
-            color: crate::msg::Color::Red,
-        };
+        let now: SystemTime = Utc::now().into();
 
         trace!("Hello World: Trace!");
         debug!("Hello World: Debug!");
@@ -150,11 +141,15 @@ mod test {
         warn!("Hello World: Warn!");
         error!("Hello World: Error!");
         fatal!("Hello World: Fatal!");
-        log!(Info, &expected);
-        error_assert!(&(expected != expected));
-        error_assert!(&(expected == expected));
-        fatal_assert!(&(expected != expected));
-        fatal_assert!(&(expected == expected));
+        log!(Info, &now);
+        log!(Info, &Some(now));
+        log!(Info, &None as &Option<String>);
+        log!(Info, &Ok::<&str, &str>("error"));
+        log!(Error, &Err::<&str, &str>("error"));
+        error_assert!(&(now != now));
+        error_assert!(&(now == now));
+        fatal_assert!(&(now != now));
+        fatal_assert!(&(now == now));
     }
 }
 
@@ -174,7 +169,7 @@ mod performance {
         let sink = VoidSink::new(SinkDeclaration {
             name: "void".to_string(),
             severity: LogSeverity::Trace,
-            module: "*".to_string(),
+            module: "".to_string(),
             template: "[%t][%[%i%]][%s][%f:%l]: %m\n".to_string(),
         });
         sink!(sink);

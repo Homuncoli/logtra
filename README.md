@@ -40,7 +40,7 @@ fn main() {
             SinkDeclaration {
                 name: "console".to_string(),
                 severity: LogSeverity::Trace,
-                module: "*".to_string(),
+                module: "".to_string(),
                 template: "[%t][%c][%[%i%]][%s][%f:%l]: %m\n".to_string(),
             }
         )
