@@ -1,7 +1,7 @@
-use std::{time::SystemTime, cmp::Ordering};
+use std::time::SystemTime;
 
 use chrono::{DateTime, Utc};
-use contra::{Serialize, Deserialize};
+use contra::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone, Copy, PartialOrd, Ord)]
 pub enum LogIntensity {
@@ -18,8 +18,8 @@ impl ToString for LogIntensity {
         match self {
             LogIntensity::Trace => "Trace".to_string(),
             LogIntensity::Debug => "Debug".to_string(),
-            LogIntensity::Info =>  "Info ".to_string(),
-            LogIntensity::Warn =>  "Warn ".to_string(),
+            LogIntensity::Info => "Info ".to_string(),
+            LogIntensity::Warn => "Warn ".to_string(),
             LogIntensity::Error => "Error".to_string(),
             LogIntensity::Fatal => "Fatal".to_string(),
         }
@@ -28,10 +28,10 @@ impl ToString for LogIntensity {
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct LogMessage<'a> {
-    pub(crate) time: SystemTime, 
-    pub(crate) scope: &'a str, 
-    pub(crate) file: &'a str, 
-    pub(crate) line: u32, 
+    pub(crate) time: SystemTime,
+    pub(crate) module: &'a str,
+    pub(crate) file: &'a str,
+    pub(crate) line: u32,
     pub(crate) msg: &'a str,
     pub(crate) intensity: LogIntensity,
     pub(crate) color: Color,
@@ -45,21 +45,21 @@ impl<'a> LogMessage<'a> {
     /// %m = log message
     /// %f = file
     /// %l = line
-    /// %s = scope
+    /// %s = module
     /// %[ = color start
     /// %] = color stop
     #[inline]
     fn replace(&self, c: char, mut parsed: String) -> String {
         match c {
-            '[' => parsed.push_str( &self.color.ansi()),
-            ']' => parsed.push_str( &Color::Default.ansi()),
-            's' => parsed.push_str(self.scope),
+            '[' => parsed.push_str(&self.color.ansi()),
+            ']' => parsed.push_str(&Color::Default.ansi()),
+            's' => parsed.push_str(self.module),
             'f' => parsed.push_str(self.file),
             'l' => parsed.push_str(&self.line.to_string()),
             'm' => parsed.push_str(self.msg),
             'i' => parsed.push_str(&self.intensity.to_string()),
-            't' =>  parsed.push_str(&DateTime::<Utc>::from(self.time).to_rfc3339()), 
-            'c' =>  parsed.push_str(&format!("{:?}",std::thread::current().id())), 
+            't' => parsed.push_str(&DateTime::<Utc>::from(self.time).to_rfc3339()),
+            'c' => parsed.push_str(&format!("{:?}", std::thread::current().id())),
             _ => (),
         };
         parsed
@@ -84,7 +84,7 @@ impl<'a> LogMessage<'a> {
                 continue;
             }
 
-            if c == '\\'{
+            if c == '\\' {
                 escaped = true;
                 continue;
             }
@@ -130,13 +130,13 @@ impl Color {
 mod test {
     use chrono::{DateTime, Utc};
 
-    use crate::msg::{LogMessage, Color};
+    use crate::msg::{Color, LogMessage};
 
     #[test]
     fn log_message_parsing_works() {
         let msg = LogMessage {
             time: DateTime::<Utc>::default().into(),
-            scope: "logtra",
+            module: "logtra",
             file: "lib.rs",
             line: 12,
             msg: "Hello world!",

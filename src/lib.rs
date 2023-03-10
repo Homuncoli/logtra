@@ -17,11 +17,11 @@ macro_rules! sink {
 /// Creates a new [crate::msg::LogMessage]
 macro_rules! msg {
     ($intensity: tt, $color: tt, $($arg:tt)*) => {
-        crate::msg::LogMessage { 
+        crate::msg::LogMessage {
             line: line!(),
             file: file!(),
             time: chrono::Utc::now().into(),
-            scope: module_path!(),
+            module: module_path!(),
             msg: &format_args!($($arg)*).to_string(),
             intensity: crate::msg::LogIntensity::$intensity,
             color: crate::msg::Color::$color,
@@ -76,6 +76,7 @@ macro_rules! fatal {
     }};
 }
 #[doc(hidden)]
+/// Use log! instead
 pub fn log<T: std::fmt::Debug>(intensity: crate::msg::LogIntensity, name: &str, obj: &T) {
     match intensity {
         msg::LogIntensity::Trace => trace!("{}: {:?}", name, obj),
@@ -98,7 +99,7 @@ macro_rules! fatal_assert {
     ($val: expr) => {
         match $val {
             true => log!(Info, $val),
-            false => log!(Fatal, $val)
+            false => log!(Fatal, $val),
         }
     };
 }
@@ -106,7 +107,7 @@ macro_rules! error_assert {
     ($val: expr) => {
         match $val {
             true => log!(Info, $val),
-            false => log!(Error, $val)
+            false => log!(Error, $val),
         }
     };
 }
@@ -115,18 +116,19 @@ macro_rules! error_assert {
 mod test {
     use chrono::Utc;
 
-    use crate::{msg::{LogIntensity, LogMessage}, sink::{ConsoleSink, SinkDeclaration}};
+    use crate::{
+        msg::{LogIntensity, LogMessage},
+        sink::{ConsoleSink, SinkDeclaration},
+    };
 
     #[test]
     fn log_macros() {
-        let sink = ConsoleSink::new(
-            SinkDeclaration {
+        let sink = ConsoleSink::new(SinkDeclaration {
             name: "console".to_string(),
             intensity: LogIntensity::Trace,
-            scope: "*".to_string(),
+            module: "*".to_string(),
             template: "[%t][%c][%[%i%]][%s][%f:%l]: %m\n".to_string(),
-            }
-        );
+        });
         sink!(sink);
 
         let now = Utc::now().into();
@@ -134,7 +136,7 @@ mod test {
 
         let expected = LogMessage {
             time: now,
-            scope: module_path!(),
+            module: module_path!(),
             file: file!(),
             line: line,
             msg: "Hello World!",
@@ -162,21 +164,22 @@ mod performance {
 
     use chrono::Utc;
 
-    use crate::{sink::{VoidSink, SinkDeclaration}, msg::LogIntensity};
+    use crate::{
+        msg::LogIntensity,
+        sink::{SinkDeclaration, VoidSink},
+    };
 
     #[test]
     fn log_performance() {
-        let sink = VoidSink::new(
-            SinkDeclaration {
-                name: "void".to_string(),
-                intensity: LogIntensity::Trace,
-                scope: "*".to_string(),
-                template: "[%t][%[%i%]][%s][%f:%l]: %m\n".to_string(),
-            }
-        );
+        let sink = VoidSink::new(SinkDeclaration {
+            name: "void".to_string(),
+            intensity: LogIntensity::Trace,
+            module: "*".to_string(),
+            template: "[%t][%[%i%]][%s][%f:%l]: %m\n".to_string(),
+        });
         sink!(sink);
 
-        for i in 0..10 {
+        for _ in 0..10 {
             let start: SystemTime = Utc::now().into();
             let mut counter = 0;
             while start.elapsed().unwrap().as_millis() < 1000 {
@@ -184,8 +187,12 @@ mod performance {
                 counter += 1;
             }
 
-            println!("Processed {} infos in {}ms", counter, start.elapsed().unwrap().as_millis());
-            assert!(counter > 0);
+            println!(
+                "Processed {} infos in {}ms",
+                counter,
+                start.elapsed().unwrap().as_millis()
+            );
+            assert!(counter > 100000);
         }
     }
 }

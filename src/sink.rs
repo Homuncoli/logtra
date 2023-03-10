@@ -1,4 +1,7 @@
-use std::{fs::File, io::{self, Write}};
+use std::{
+    fs::File,
+    io::{self, Write},
+};
 
 use contra::{Deserialize, Serialize};
 
@@ -8,36 +11,40 @@ use crate::msg::{LogIntensity, LogMessage};
 pub struct SinkDeclaration {
     pub(crate) name: String,
     pub(crate) intensity: LogIntensity,
-    pub(crate) scope: String,
+    pub(crate) module: String,
     pub(crate) template: String,
 }
 
+/// The Logger trait of Logtra
+/// Every instance of a [crate::sink::Sink] must be registered via [crate::sink!] in order to receive logs to process
 pub trait Sink: Sync + 'static {
     fn log(&mut self, msg: &LogMessage);
+
+    /// Pre-filters received msg based on [crate::sink::Sink::intensity] and [crate::sink::Sink::module]
     fn log_filtered(&mut self, msg: &LogMessage) {
         if self.intensity() > msg.intensity {
             return;
         }
-        if msg.scope.contains(self.scope()) {
+        if !msg.module.contains(self.module()) {
             return;
         }
 
         self.log(msg);
     }
 
-    fn intensity(&self) -> LogIntensity; 
-    fn scope(&self) -> &str; 
+    /// Returns the intensity which must be matched or exceeded by the receiving msg to be logged
+    fn intensity(&self) -> LogIntensity;
+    /// Returns the module in which the receiving msg must be to be logged
+    fn module(&self) -> &str;
 }
 
-pub struct ConsoleSink { 
-    decl: SinkDeclaration
+pub struct ConsoleSink {
+    decl: SinkDeclaration,
 }
 
 impl ConsoleSink {
     pub fn new(decl: SinkDeclaration) -> Self {
-        ConsoleSink {  
-            decl
-        }
+        ConsoleSink { decl }
     }
 }
 
@@ -50,13 +57,12 @@ impl Sink for ConsoleSink {
         self.decl.intensity
     }
 
-    fn scope(&self) -> &str {
-        &self.decl.scope
+    fn module(&self) -> &str {
+        &self.decl.module
     }
 }
 
-
-const FILE_SINK_BUFFER_SIZE: usize = 100;
+const FILE_SINK_BUFFER_SIZE: usize = 1000;
 pub struct FileSink {
     decl: SinkDeclaration,
     buffer: [String; FILE_SINK_BUFFER_SIZE],
@@ -65,10 +71,10 @@ pub struct FileSink {
 
 impl FileSink {
     fn new(decl: SinkDeclaration) -> Self {
-        const empty: String = String::new();
-        FileSink { 
+        const EMPTY: String = String::new();
+        FileSink {
             decl,
-            buffer: [empty; FILE_SINK_BUFFER_SIZE],
+            buffer: [EMPTY; FILE_SINK_BUFFER_SIZE],
             index: 0,
         }
     }
@@ -79,8 +85,8 @@ impl FileSink {
             file.write_all((self.buffer.get(i).unwrap()).as_bytes())?;
         }
 
-        const empty: String = String::new();
-        self.buffer = [empty; FILE_SINK_BUFFER_SIZE];
+        const EMPTY: String = String::new();
+        self.buffer = [EMPTY; FILE_SINK_BUFFER_SIZE];
         Ok(())
     }
 }
@@ -100,8 +106,8 @@ impl Sink for FileSink {
         self.decl.intensity
     }
 
-    fn scope(&self) -> &str {
-        &self.decl.scope
+    fn module(&self) -> &str {
+        &self.decl.module
     }
 }
 
@@ -114,14 +120,12 @@ impl Drop for FileSink {
 }
 
 pub struct VoidSink {
-    decl: SinkDeclaration
+    decl: SinkDeclaration,
 }
 
 impl VoidSink {
     pub fn new(decl: SinkDeclaration) -> Self {
-        Self {
-            decl
-        }
+        Self { decl }
     }
 }
 
@@ -134,32 +138,35 @@ impl Sink for VoidSink {
         self.decl.intensity
     }
 
-    fn scope(&self) -> &str {
-        &self.decl.scope
+    fn module(&self) -> &str {
+        &self.decl.module
     }
 }
 
 #[cfg(test)]
 mod test {
-    use std::{fs::{remove_file}, path::Path};
+    use std::{fs::remove_file, path::Path};
 
     use chrono::{DateTime, Utc};
 
-    use crate::{sink::{SinkDeclaration, ConsoleSink, Sink}, msg::{LogIntensity, LogMessage, Color}};
+    use crate::{
+        msg::{Color, LogIntensity, LogMessage},
+        sink::{ConsoleSink, Sink, SinkDeclaration},
+    };
 
     use super::FileSink;
 
     #[test]
     fn console_sink_works() {
-        let decl = SinkDeclaration { 
-            name: "Default".to_string(), 
-            intensity: LogIntensity::Info, 
-            scope: "*".to_string(), 
-            template: "[%t][%c%s%c][%f:%l]: %m\n".to_string() 
+        let decl = SinkDeclaration {
+            name: "Default".to_string(),
+            intensity: LogIntensity::Info,
+            module: "".to_string(),
+            template: "[%t][%c%s%c][%f:%l]: %m\n".to_string(),
         };
         let msg = LogMessage {
             time: DateTime::<Utc>::default().into(),
-            scope: "logtra",
+            module: "logtra",
             file: file!(),
             line: line!(),
             msg: "Hello world!",
@@ -173,15 +180,15 @@ mod test {
 
     #[test]
     fn file_sink_works() {
-        let decl = SinkDeclaration { 
-            name: "example.log".to_string(), 
-            intensity: LogIntensity::Info, 
-            scope: "*".to_string(), 
-            template: "[%t][%s][%f:%l]: %m\n".to_string() 
+        let decl = SinkDeclaration {
+            name: "example.log".to_string(),
+            intensity: LogIntensity::Info,
+            module: "".to_string(),
+            template: "[%t][%s][%f:%l]: %m\n".to_string(),
         };
         let msg = LogMessage {
             time: DateTime::<Utc>::default().into(),
-            scope: "logtra",
+            module: "logtra",
             file: file!(),
             line: line!(),
             msg: "Hello world!",
