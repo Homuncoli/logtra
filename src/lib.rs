@@ -5,6 +5,7 @@ pub mod sink;
 
 static mut SINKS: Vec<Box<dyn Sink>> = Vec::new();
 
+/// Registers a new [crate::sink::Sink]
 macro_rules! sink {
     ($sink: tt) => {{
         unsafe {
@@ -13,12 +14,13 @@ macro_rules! sink {
     }};
 }
 
+/// Creates a new [crate::msg::LogMessage]
 macro_rules! msg {
-    ($intensity: tt, $color: tt, $time: expr, $line: expr, $($arg:tt)*) => {
+    ($intensity: tt, $color: tt, $($arg:tt)*) => {
         crate::msg::LogMessage { 
-            line: $line,
+            line: line!(),
             file: file!(),
-            time: $time,
+            time: chrono::Utc::now().into(),
             scope: module_path!(),
             msg: &format_args!($($arg)*).to_string(),
             intensity: crate::msg::LogIntensity::$intensity,
@@ -26,12 +28,8 @@ macro_rules! msg {
         };
     };
 }
-macro_rules! msg_now {
-    ($intensity: tt, $color: ident, $($arg:tt)*) => {
-        msg!($intensity, $color, chrono::Utc::now().into(), line!(), $($arg)*)
-    };
-}
-macro_rules! log {
+/// Takes a [crate::msg::LogMessage] and tries to log it on every registered [crate::sink::Sink]
+macro_rules! publish {
     ($msg: expr) => {
         unsafe {
             for i in 0..crate::SINKS.len() {
@@ -43,69 +41,81 @@ macro_rules! log {
 
 macro_rules! trace {
     ($($arg:tt)*) => {{
-        let msg = msg_now!(Trace, Grey, $($arg)*);
-        log!(&msg);
+        let msg = msg!(Trace, Grey, $($arg)*);
+        publish!(&msg);
     }};
 }
 macro_rules! debug {
     ($($arg:tt)*) => {{
-        let msg = msg_now!(Debug, Blue, $($arg)*);
-        log!(&msg);
+        let msg = msg!(Debug, Blue, $($arg)*);
+        publish!(&msg);
     }};
 }
 macro_rules! info {
     ($($arg:tt)*) => {{
-        let msg = msg_now!(Info, Default, $($arg)*);
-        log!(&msg);
+        let msg = msg!(Info, Default, $($arg)*);
+        publish!(&msg);
     }};
 }
 macro_rules! warn {
     ($($arg:tt)*) => {{
-        let msg = msg_now!(Warn, Orange, $($arg)*);
-        log!(&msg);
+        let msg = msg!(Warn, Orange, $($arg)*);
+        publish!(&msg);
     }};
 }
 macro_rules! error {
     ($($arg:tt)*) => {{
-        let msg = msg_now!(Error, Red, $($arg)*);
-        log!(&msg);
+        let msg = msg!(Error, Red, $($arg)*);
+        publish!(&msg);
     }};
 }
 macro_rules! fatal {
     ($($arg:tt)*) => {{
-        let msg = msg_now!(Fatal, DarkRed, $($arg)*);
-        log!(&msg);
+        let msg = msg!(Fatal, DarkRed, $($arg)*);
+        publish!(&msg);
     }};
 }
-
+#[doc(hidden)]
+pub fn log<T: std::fmt::Debug>(intensity: crate::msg::LogIntensity, name: &str, obj: &T) {
+    match intensity {
+        msg::LogIntensity::Trace => trace!("{}: {:?}", name, obj),
+        msg::LogIntensity::Debug => debug!("{}: {:?}", name, obj),
+        msg::LogIntensity::Info => info!("{}: {:?}", name, obj),
+        msg::LogIntensity::Warn => warn!("{}: {:?}", name, obj),
+        msg::LogIntensity::Error => error!("{}: {:?}", name, obj),
+        msg::LogIntensity::Fatal => fatal!("{}: {:?}", name, obj),
+    }
+}
+macro_rules! log {
+    ($obj: expr) => {
+        log!(Debug, $obj)
+    };
+    ($intensity: tt, $obj: expr) => {
+        crate::log(crate::msg::LogIntensity::$intensity, stringify!($obj), $obj)
+    };
+}
+macro_rules! fatal_assert {
+    ($val: expr) => {
+        match $val {
+            true => log!(Info, $val),
+            false => log!(Fatal, $val)
+        }
+    };
+}
+macro_rules! error_assert {
+    ($val: expr) => {
+        match $val {
+            true => log!(Info, $val),
+            false => log!(Error, $val)
+        }
+    };
+}
 
 #[cfg(test)]
 mod test {
-    use std::time::SystemTime;
-
     use chrono::Utc;
 
-    use crate::{msg::{LogIntensity, LogMessage}, sink::{ConsoleSink, SinkDeclaration, VoidSink}};
-
-    #[test]
-    fn msg_macro() {
-        let now = Utc::now().into();
-        let line = line!();
-
-        let expected = LogMessage {
-            time: now,
-            scope: module_path!(),
-            file: file!(),
-            line: line,
-            msg: "Hello World!",
-            intensity: LogIntensity::Info,
-            color: crate::msg::Color::Red,
-        };
-
-        let result = msg!(Info, Red, now, line, "Hello World!");
-        
-        assert_eq!(expected, result);
-    }
+    use crate::{msg::{LogIntensity, LogMessage}, sink::{ConsoleSink, SinkDeclaration}};
 
     #[test]
     fn log_macros() {
@@ -138,6 +148,11 @@ mod test {
         warn!("Hello World: Warn!");
         error!("Hello World: Error!");
         fatal!("Hello World: Fatal!");
+        log!(Info, &expected);
+        error_assert!(&(expected != expected));
+        error_assert!(&(expected == expected));
+        fatal_assert!(&(expected != expected));
+        fatal_assert!(&(expected == expected));
     }
 }
 
