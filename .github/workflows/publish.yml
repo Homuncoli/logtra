@@ -1,0 +1,23 @@
+name: Publish
+
+on:
+  push:
+    branches:
+     - "master"
+
+jobs:
+  publish:
+    if: "startsWith(github.event.head_commit.message, '[PUBLISH]: ')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: cargo-workspaces
+          version: latest
+      - name: Publish
+        run: "cargo ws publish $BUMP -a --exact --force '*' -y --no-git-commit --from-git --token $CRATE_REGISTRY_TOKEN"
+        env:
+          CRATE_REGISTRY_TOKEN: ${{ secrets.CRATE_REGISTRY_TOKEN }}
