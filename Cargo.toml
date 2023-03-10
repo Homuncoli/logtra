@@ -1,6 +1,6 @@
 [package]
 name = "logtra"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Benedikt Danner <benedikt@danner.eu.com>"]
 edition = "2021"
 description = "A minimal logging library"
