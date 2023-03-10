@@ -116,6 +116,7 @@ macro_rules! time {
         let $name : std::time::SystemTime = chrono::Utc::now().into();
         $block
         debug!("{} took {}ms", stringify!($name), $name.elapsed().unwrap().as_millis());
+        $name
     }};
 }
 
@@ -174,7 +175,7 @@ mod test {
             for _ in 0..1000000 {
                 a += 1 + 1 / 2 % 2;
             }
-        })
+        });
     }
 }
 
