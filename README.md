@@ -39,7 +39,7 @@ fn main() {
         ConsoleSink::new(
             SinkDeclaration {
                 name: "console".to_string(),
-                severity: Logseverity::Trace,
+                severity: LogSeverity::Trace,
                 module: "*".to_string(),
                 template: "[%t][%c][%[%i%]][%s][%f:%l]: %m\n".to_string(),
             }

@@ -16,16 +16,16 @@ macro_rules! sink {
 
 /// Creates a new [crate::msg::LogMessage]
 macro_rules! msg {
-    ($intensity: tt, $color: tt, $($arg:tt)*) => {
+    ($severity: tt, $color: tt, $($arg:tt)*) => {
         crate::msg::LogMessage {
             line: line!(),
             file: file!(),
             time: chrono::Utc::now().into(),
             module: module_path!(),
             msg: &format_args!($($arg)*).to_string(),
-            intensity: crate::msg::LogIntensity::$intensity,
+            severity: crate::msg::LogSeverity::$severity,
             color: crate::msg::Color::$color,
-        };
+        }
     };
 }
 /// Takes a [crate::msg::LogMessage] and tries to log it on every registered [crate::sink::Sink]
@@ -77,22 +77,22 @@ macro_rules! fatal {
 }
 #[doc(hidden)]
 /// Use log! instead
-pub fn log<T: std::fmt::Debug>(intensity: crate::msg::LogIntensity, name: &str, obj: &T) {
-    match intensity {
-        msg::LogIntensity::Trace => trace!("{}: {:?}", name, obj),
-        msg::LogIntensity::Debug => debug!("{}: {:?}", name, obj),
-        msg::LogIntensity::Info => info!("{}: {:?}", name, obj),
-        msg::LogIntensity::Warn => warn!("{}: {:?}", name, obj),
-        msg::LogIntensity::Error => error!("{}: {:?}", name, obj),
-        msg::LogIntensity::Fatal => fatal!("{}: {:?}", name, obj),
+pub fn log<T: std::fmt::Debug>(severity: crate::msg::LogSeverity, name: &str, obj: &T) {
+    match severity {
+        msg::LogSeverity::Trace => trace!("{}: {:?}", name, obj),
+        msg::LogSeverity::Debug => debug!("{}: {:?}", name, obj),
+        msg::LogSeverity::Info => info!("{}: {:?}", name, obj),
+        msg::LogSeverity::Warn => warn!("{}: {:?}", name, obj),
+        msg::LogSeverity::Error => error!("{}: {:?}", name, obj),
+        msg::LogSeverity::Fatal => fatal!("{}: {:?}", name, obj),
     }
 }
 macro_rules! log {
     ($obj: expr) => {
         log!(Debug, $obj)
     };
-    ($intensity: tt, $obj: expr) => {
-        crate::log(crate::msg::LogIntensity::$intensity, stringify!($obj), $obj)
+    ($severity: tt, $obj: expr) => {
+        crate::log(crate::msg::LogSeverity::$severity, stringify!($obj), $obj)
     };
 }
 macro_rules! fatal_assert {
@@ -117,7 +117,7 @@ mod test {
     use chrono::Utc;
 
     use crate::{
-        msg::{LogIntensity, LogMessage},
+        msg::{LogMessage, LogSeverity},
         sink::{ConsoleSink, SinkDeclaration},
     };
 
@@ -125,7 +125,7 @@ mod test {
     fn log_macros() {
         let sink = ConsoleSink::new(SinkDeclaration {
             name: "console".to_string(),
-            intensity: LogIntensity::Trace,
+            severity: LogSeverity::Trace,
             module: "*".to_string(),
             template: "[%t][%c][%[%i%]][%s][%f:%l]: %m\n".to_string(),
         });
@@ -140,7 +140,7 @@ mod test {
             file: file!(),
             line: line,
             msg: "Hello World!",
-            intensity: LogIntensity::Info,
+            severity: LogSeverity::Info,
             color: crate::msg::Color::Red,
         };
 
@@ -165,7 +165,7 @@ mod performance {
     use chrono::Utc;
 
     use crate::{
-        msg::LogIntensity,
+        msg::LogSeverity,
         sink::{SinkDeclaration, VoidSink},
     };
 
@@ -173,7 +173,7 @@ mod performance {
     fn log_performance() {
         let sink = VoidSink::new(SinkDeclaration {
             name: "void".to_string(),
-            intensity: LogIntensity::Trace,
+            severity: LogSeverity::Trace,
             module: "*".to_string(),
             template: "[%t][%[%i%]][%s][%f:%l]: %m\n".to_string(),
         });

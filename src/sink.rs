@@ -5,12 +5,12 @@ use std::{
 
 use contra::{Deserialize, Serialize};
 
-use crate::msg::{LogIntensity, LogMessage};
+use crate::msg::{LogMessage, LogSeverity};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub struct SinkDeclaration {
     pub(crate) name: String,
-    pub(crate) intensity: LogIntensity,
+    pub(crate) severity: LogSeverity,
     pub(crate) module: String,
     pub(crate) template: String,
 }
@@ -20,9 +20,9 @@ pub struct SinkDeclaration {
 pub trait Sink: Sync + 'static {
     fn log(&mut self, msg: &LogMessage);
 
-    /// Pre-filters received msg based on [crate::sink::Sink::intensity] and [crate::sink::Sink::module]
+    /// Pre-filters received msg based on [crate::sink::Sink::severity] and [crate::sink::Sink::module]
     fn log_filtered(&mut self, msg: &LogMessage) {
-        if self.intensity() > msg.intensity {
+        if self.severity() > msg.severity {
             return;
         }
         if !msg.module.contains(self.module()) {
@@ -32,8 +32,8 @@ pub trait Sink: Sync + 'static {
         self.log(msg);
     }
 
-    /// Returns the intensity which must be matched or exceeded by the receiving msg to be logged
-    fn intensity(&self) -> LogIntensity;
+    /// Returns the severity which must be matched or exceeded by the receiving msg to be logged
+    fn severity(&self) -> LogSeverity;
     /// Returns the module in which the receiving msg must be to be logged
     fn module(&self) -> &str;
 }
@@ -53,8 +53,8 @@ impl Sink for ConsoleSink {
         print!("{}", msg.parse(&self.decl.template));
     }
 
-    fn intensity(&self) -> LogIntensity {
-        self.decl.intensity
+    fn severity(&self) -> LogSeverity {
+        self.decl.severity
     }
 
     fn module(&self) -> &str {
@@ -102,8 +102,8 @@ impl Sink for FileSink {
         self.index = self.index + 1 % FILE_SINK_BUFFER_SIZE;
     }
 
-    fn intensity(&self) -> LogIntensity {
-        self.decl.intensity
+    fn severity(&self) -> LogSeverity {
+        self.decl.severity
     }
 
     fn module(&self) -> &str {
@@ -134,8 +134,8 @@ impl Sink for VoidSink {
         // do nothing
     }
 
-    fn intensity(&self) -> LogIntensity {
-        self.decl.intensity
+    fn severity(&self) -> LogSeverity {
+        self.decl.severity
     }
 
     fn module(&self) -> &str {
@@ -150,7 +150,7 @@ mod test {
     use chrono::{DateTime, Utc};
 
     use crate::{
-        msg::{Color, LogIntensity, LogMessage},
+        msg::{Color, LogMessage, LogSeverity},
         sink::{ConsoleSink, Sink, SinkDeclaration},
     };
 
@@ -160,7 +160,7 @@ mod test {
     fn console_sink_works() {
         let decl = SinkDeclaration {
             name: "Default".to_string(),
-            intensity: LogIntensity::Info,
+            severity: LogSeverity::Info,
             module: "".to_string(),
             template: "[%t][%c%s%c][%f:%l]: %m\n".to_string(),
         };
@@ -170,7 +170,7 @@ mod test {
             file: file!(),
             line: line!(),
             msg: "Hello world!",
-            intensity: LogIntensity::Info,
+            severity: LogSeverity::Info,
             color: Color::Red,
         };
 
@@ -182,7 +182,7 @@ mod test {
     fn file_sink_works() {
         let decl = SinkDeclaration {
             name: "example.log".to_string(),
-            intensity: LogIntensity::Info,
+            severity: LogSeverity::Info,
             module: "".to_string(),
             template: "[%t][%s][%f:%l]: %m\n".to_string(),
         };
@@ -192,7 +192,7 @@ mod test {
             file: file!(),
             line: line!(),
             msg: "Hello world!",
-            intensity: LogIntensity::Info,
+            severity: LogSeverity::Info,
             color: Color::Red,
         };
 

@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use contra::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone, Copy, PartialOrd, Ord)]
-pub enum LogIntensity {
+pub enum LogSeverity {
     Trace = -2,
     Debug = -1,
     Info = 0,
@@ -13,15 +13,15 @@ pub enum LogIntensity {
     Fatal = 3,
 }
 
-impl ToString for LogIntensity {
+impl ToString for LogSeverity {
     fn to_string(&self) -> String {
         match self {
-            LogIntensity::Trace => "Trace".to_string(),
-            LogIntensity::Debug => "Debug".to_string(),
-            LogIntensity::Info => "Info ".to_string(),
-            LogIntensity::Warn => "Warn ".to_string(),
-            LogIntensity::Error => "Error".to_string(),
-            LogIntensity::Fatal => "Fatal".to_string(),
+            LogSeverity::Trace => "Trace".to_string(),
+            LogSeverity::Debug => "Debug".to_string(),
+            LogSeverity::Info => "Info ".to_string(),
+            LogSeverity::Warn => "Warn ".to_string(),
+            LogSeverity::Error => "Error".to_string(),
+            LogSeverity::Fatal => "Fatal".to_string(),
         }
     }
 }
@@ -33,7 +33,7 @@ pub struct LogMessage<'a> {
     pub(crate) file: &'a str,
     pub(crate) line: u32,
     pub(crate) msg: &'a str,
-    pub(crate) intensity: LogIntensity,
+    pub(crate) severity: LogSeverity,
     pub(crate) color: Color,
 }
 
@@ -41,7 +41,7 @@ impl<'a> LogMessage<'a> {
     /// Replaces all % patterns with the appropriate content
     /// %t = UTC timestamp
     /// %c = current thread id
-    /// %i = log intensity
+    /// %i = log severity
     /// %m = log message
     /// %f = file
     /// %l = line
@@ -57,7 +57,7 @@ impl<'a> LogMessage<'a> {
             'f' => parsed.push_str(self.file),
             'l' => parsed.push_str(&self.line.to_string()),
             'm' => parsed.push_str(self.msg),
-            'i' => parsed.push_str(&self.intensity.to_string()),
+            'i' => parsed.push_str(&self.severity.to_string()),
             't' => parsed.push_str(&DateTime::<Utc>::from(self.time).to_rfc3339()),
             'c' => parsed.push_str(&format!("{:?}", std::thread::current().id())),
             _ => (),
@@ -140,7 +140,7 @@ mod test {
             file: "lib.rs",
             line: 12,
             msg: "Hello world!",
-            intensity: crate::msg::LogIntensity::Info,
+            severity: crate::msg::LogSeverity::Info,
             color: Color::Red,
         };
 
