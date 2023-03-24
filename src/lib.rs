@@ -16,6 +16,7 @@ macro_rules! sink {
 }
 
 /// Creates a new [crate::msg::LogMessage]
+#[macro_export]
 macro_rules! msg {
     ($severity: tt, $color: tt, $($arg:tt)*) => {
         crate::msg::LogMessage {
@@ -30,6 +31,7 @@ macro_rules! msg {
     };
 }
 /// Takes a [crate::msg::LogMessage] and tries to log it on every registered [crate::sink::Sink]
+#[macro_export]
 macro_rules! publish {
     ($msg: expr) => {
         unsafe {
