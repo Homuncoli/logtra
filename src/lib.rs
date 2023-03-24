@@ -6,6 +6,7 @@ pub mod sink;
 static mut SINKS: Vec<Box<dyn Sink>> = Vec::new();
 
 /// Registers a new [crate::sink::Sink]
+#[macro_export]
 macro_rules! sink {
     ($sink: tt) => {{
         unsafe {
@@ -39,36 +40,42 @@ macro_rules! publish {
     };
 }
 
+#[macro_export]
 macro_rules! trace {
     ($($arg:tt)*) => {{
         let msg = msg!(Trace, Grey, $($arg)*);
         publish!(&msg);
     }};
 }
+#[macro_export]
 macro_rules! debug {
     ($($arg:tt)*) => {{
         let msg = msg!(Debug, Blue, $($arg)*);
         publish!(&msg);
     }};
 }
+#[macro_export]
 macro_rules! info {
     ($($arg:tt)*) => {{
         let msg = msg!(Info, Default, $($arg)*);
         publish!(&msg);
     }};
 }
+#[macro_export]
 macro_rules! warn {
     ($($arg:tt)*) => {{
         let msg = msg!(Warn, Orange, $($arg)*);
         publish!(&msg);
     }};
 }
+#[macro_export]
 macro_rules! error {
     ($($arg:tt)*) => {{
         let msg = msg!(Error, Red, $($arg)*);
         publish!(&msg);
     }};
 }
+#[macro_export]
 macro_rules! fatal {
     ($($arg:tt)*) => {{
         let msg = msg!(Fatal, DarkRed, $($arg)*);
@@ -87,6 +94,7 @@ pub fn log<T: std::fmt::Debug + ?Sized>(severity: crate::msg::LogSeverity, name:
         msg::LogSeverity::Fatal => fatal!("{}: {:?}", name, obj),
     }
 }
+#[macro_export]
 macro_rules! log {
     ($obj: expr) => {
         log!(Debug, $obj)
@@ -95,6 +103,7 @@ macro_rules! log {
         crate::log(crate::msg::LogSeverity::$severity, stringify!($obj), $obj)
     };
 }
+#[macro_export]
 macro_rules! fatal_assert {
     ($val: expr) => {
         match $val {
@@ -103,6 +112,7 @@ macro_rules! fatal_assert {
         }
     };
 }
+#[macro_export]
 macro_rules! error_assert {
     ($val: expr) => {
         match $val {
@@ -111,6 +121,7 @@ macro_rules! error_assert {
         }
     };
 }
+#[macro_export]
 macro_rules! time {
     ($name: ident, $block: block) => {{
         let $name : std::time::SystemTime = chrono::Utc::now().into();
